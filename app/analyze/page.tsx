@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { Upload, ImageIcon, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Upload, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/app/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Progress } from '@/app/components/ui/progress';
