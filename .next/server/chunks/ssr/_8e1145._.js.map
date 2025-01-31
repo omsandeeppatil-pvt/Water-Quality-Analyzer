@@ -1,9 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 7, "column": 0}, "map": {"version":3,"sources":["file:///workspaces/Water-Quality-Analyzer/app/page.tsx"],"sourcesContent":["\n\nimport React from 'react';\nimport { Link } from 'react-router-dom';\nimport '@/app/styles/page.css'; // Custom styles\n\nconst IndexPage: React.FC = () => {\n  return (\n    <div className=\"landing-container\">\n      <header className=\"header\">\n        <h1 className=\"title\">Water Quality Analyzer</h1>\n        <p className=\"subtitle\">Make informed decisions about water safety and quality</p>\n      </header>\n      <div className=\"content\">\n        <p className=\"description\">\n          Our tool helps you assess and monitor the quality of your water sources. \n          Analyze the health of your water and get real-time data on contaminants, \n          pH levels, and more!\n        </p>\n        <Link to=\"/analyze\" className=\"cta-button\">Go to Analyze Page</Link>\n      </div>\n      <footer className=\"footer\">\n        <p>© 2025 Water Quality Analyzer</p>\n      </footer>\n    </div>\n  );\n}\n\nexport default IndexPage;\n"],"names":[],"mappings":";;;;AAGA;;;;AAGA,MAAM,YAAsB;IAC1B,qBACE,8OAAC;QAAI,WAAU;;0BACb,8OAAC;gBAAO,WAAU;;kCAChB,8OAAC;wBAAG,WAAU;kCAAQ;;;;;;kCACtB,8OAAC;wBAAE,WAAU;kCAAW;;;;;;;;;;;;0BAE1B,8OAAC;gBAAI,WAAU;;kCACb,8OAAC;wBAAE,WAAU;kCAAc;;;;;;kCAK3B,8OAAC,uJAAA,CAAA,OAAI;wBAAC,IAAG;wBAAW,WAAU;kCAAa;;;;;;;;;;;;0BAE7C,8OAAC;gBAAO,WAAU;0BAChB,cAAA,8OAAC;8BAAE;;;;;;;;;;;;;;;;;AAIX;uCAEe"}},
-    {"offset": {"line": 92, "column": 0}, "map": {"version":3,"sources":[],"names":[],"mappings":"A"}},
-    {"offset": {"line": 103, "column": 0}, "map": {"version":3,"sources":[],"names":[],"mappings":""}},
-    {"offset": {"line": 103, "column": 0}, "map": {"version":3,"sources":[],"names":[],"mappings":"A"}}]
-}

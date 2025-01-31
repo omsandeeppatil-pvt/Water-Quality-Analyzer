@@ -1,15 +1,27 @@
 "use client";
-
 import React, { useState, useRef } from 'react';
-import { Upload, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Upload, Loader2, AlertCircle, CheckCircle2, Droplets } from 'lucide-react';
 import { Alert, AlertDescription } from '@/app/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Progress } from '@/app/components/ui/progress';
 
+interface WaterQualityResult {
+  overallQuality: string;
+  metrics: {
+    ph: number;
+    turbidity: number;
+    dissolvedOxygen: number;
+    temperature: number;
+    conductivity: number;
+    totalDissolvedSolids: number;
+  };
+  recommendations: string[];
+}
+
 export default function AnalyzePage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [result, setResult] = useState<string | null>(null);
+  const [result, setResult] = useState<WaterQualityResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -21,7 +33,6 @@ export default function AnalyzePage() {
       setError(null);
       setResult(null);
       
-      // Create preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result as string);
@@ -71,7 +82,6 @@ export default function AnalyzePage() {
       
       const formData = new FormData();
       formData.append('file', selectedFile);
-
       const response = await fetch('/api/analyze', {
         method: 'POST',
         body: formData,
@@ -82,7 +92,7 @@ export default function AnalyzePage() {
       }
 
       const data = await response.json();
-      setResult(data.result);
+      setResult(data);
     } catch (error) {
       console.error('Error analyzing image:', error);
       setError('Failed to analyze the image. Please try again.');
@@ -91,8 +101,21 @@ export default function AnalyzePage() {
     }
   };
 
-  const getResultColor = (result: string) => {
-    switch (result) {
+  const getQualityColor = (value: number, type: string) => {
+    switch (type) {
+      case 'ph':
+        if (value >= 6.5 && value <= 8.5) return 'text-green-600';
+        return 'text-red-600';
+      case 'turbidity':
+        if (value <= 5) return 'text-green-600';
+        return 'text-red-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
+
+  const getOverallQualityColor = (quality: string) => {
+    switch (quality) {
       case 'Excellent':
         return 'text-green-600';
       case 'Good':
@@ -108,10 +131,11 @@ export default function AnalyzePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
-      <Card className="max-w-2xl mx-auto">
+      <Card className="max-w-3xl mx-auto">
         <CardHeader>
-          <CardTitle className="text-center text-2xl font-bold">
-            Water Quality Analyzer
+          <CardTitle className="text-center text-2xl font-bold flex items-center justify-center gap-2">
+            <Droplets className="w-6 h-6" />
+            Advanced Water Quality Analyzer
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -147,7 +171,7 @@ export default function AnalyzePage() {
                 <Upload className="w-12 h-12 mx-auto text-gray-400" />
                 <div>
                   <p className="text-lg font-medium">
-                    Drop your image here or click to upload
+                    Drop your water sample image here or click to upload
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
                     Supports: JPG, PNG, GIF
@@ -161,7 +185,7 @@ export default function AnalyzePage() {
             <div className="space-y-2">
               <div className="flex items-center gap-2 justify-center text-blue-600">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Analyzing image...</span>
+                <span>Analyzing water quality...</span>
               </div>
               <Progress value={66} className="h-1" />
             </div>
@@ -175,16 +199,65 @@ export default function AnalyzePage() {
           )}
 
           {result && (
-            <div className="bg-white rounded-lg p-6 shadow-sm border">
+            <div className="bg-white rounded-lg p-6 shadow-sm border space-y-6">
               <div className="flex items-center gap-2 justify-center">
                 <CheckCircle2 className="w-6 h-6 text-green-500" />
                 <h3 className="text-xl font-semibold">Analysis Complete</h3>
               </div>
-              <div className="mt-4 text-center">
-                <p className="text-gray-600">Water Quality Assessment:</p>
-                <p className={`text-2xl font-bold mt-2 ${getResultColor(result)}`}>
-                  {result}
+
+              <div className="text-center">
+                <p className="text-gray-600">Overall Water Quality:</p>
+                <p className={`text-2xl font-bold mt-2 ${getOverallQualityColor(result.overallQuality)}`}>
+                  {result.overallQuality}
                 </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600">pH Level</p>
+                  <p className={`text-xl font-bold ${getQualityColor(result.metrics.ph, 'ph')}`}>
+                    {result.metrics.ph}
+                  </p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600">Turbidity (NTU)</p>
+                  <p className={`text-xl font-bold ${getQualityColor(result.metrics.turbidity, 'turbidity')}`}>
+                    {result.metrics.turbidity}
+                  </p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600">Dissolved Oxygen (mg/L)</p>
+                  <p className="text-xl font-bold">
+                    {result.metrics.dissolvedOxygen}
+                  </p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600">Temperature (°C)</p>
+                  <p className="text-xl font-bold">
+                    {result.metrics.temperature}
+                  </p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600">Conductivity (µS/cm)</p>
+                  <p className="text-xl font-bold">
+                    {result.metrics.conductivity}
+                  </p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600">TDS (mg/L)</p>
+                  <p className="text-xl font-bold">
+                    {result.metrics.totalDissolvedSolids}
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <p className="font-medium mb-2">Recommendations:</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  {result.recommendations.map((rec, index) => (
+                    <li key={index} className="text-sm text-gray-600">{rec}</li>
+                  ))}
+                </ul>
               </div>
             </div>
           )}
@@ -198,7 +271,7 @@ export default function AnalyzePage() {
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-blue-600 hover:bg-blue-700'}`}
           >
-            {loading ? 'Analyzing...' : 'Analyze Image'}
+            {loading ? 'Analyzing...' : 'Analyze Water Quality'}
           </button>
         </CardContent>
       </Card>

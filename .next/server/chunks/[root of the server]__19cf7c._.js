@@ -138,7 +138,7 @@ __turbopack_esm__({
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_import__("[project]/node_modules/next/server.js [app-route] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$jimp$2f$dist$2f$esm$2f$index$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$module__evaluation$3e$__ = __turbopack_import__("[project]/node_modules/jimp/dist/esm/index.js [app-route] (ecmascript) <module evaluation>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$jimp$2f$dist$2f$esm$2f$index$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$locals$3e$__ = __turbopack_import__("[project]/node_modules/jimp/dist/esm/index.js [app-route] (ecmascript) <locals>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$jimp$2f$dist$2f$esm$2f$index$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_import__("[project]/node_modules/jimp/dist/esm/index.js [app-route] (ecmascript)");
 ;
 ;
 async function POST(request) {
@@ -152,31 +152,23 @@ async function POST(request) {
                 status: 400
             });
         }
-        // Convert file to buffer
         const buffer = Buffer.from(await file.arrayBuffer());
-        // Process image using Jimp
-        const image = await __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$jimp$2f$dist$2f$esm$2f$index$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$locals$3e$__["Jimp"].read(buffer);
-        let totalBlue = 0;
-        let totalPixels = 0;
-        image.scan(0, 0, image.bitmap.width, image.bitmap.height, (_x, _y, idx)=>{
-            const blue = image.bitmap.data[idx + 2];
-            totalBlue += blue;
-            totalPixels++;
-        });
-        const averageBlue = totalBlue / totalPixels;
-        let waterQuality = "Unknown";
-        if (averageBlue > 200) {
-            waterQuality = "Excellent";
-        } else if (averageBlue > 150) {
-            waterQuality = "Good";
-        } else if (averageBlue > 100) {
-            waterQuality = "Fair";
-        } else {
-            waterQuality = "Poor";
+        // Read image using Jimp
+        const image = await __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$jimp$2f$dist$2f$esm$2f$index$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__.read(buffer);
+        if (!image) {
+            throw new Error("Failed to read image");
         }
-        return __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
-            result: waterQuality
-        }, {
+        const metrics = analyzeImage(image);
+        const overallQuality = determineWaterQuality(metrics);
+        const safetyStatus = assessWaterSafety(metrics);
+        const recommendations = generateRecommendations(metrics, safetyStatus);
+        const result = {
+            overallQuality,
+            metrics,
+            recommendations,
+            safetyStatus
+        };
+        return __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json(result, {
             status: 200
         });
     } catch (error) {
@@ -187,6 +179,144 @@ async function POST(request) {
             status: 500
         });
     }
+}
+function analyzeImage(image) {
+    const width = image.getWidth();
+    const height = image.getHeight();
+    let colorTotals = {
+        red: 0,
+        green: 0,
+        blue: 0,
+        brightness: 0,
+        saturation: 0,
+        variance: 0
+    };
+    // First pass: calculate averages
+    for(let x = 0; x < width; x++){
+        for(let y = 0; y < height; y++){
+            const color = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$jimp$2f$dist$2f$esm$2f$index$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__.intToRGBA(image.getPixelColor(x, y));
+            const { r: red, g: green, b: blue } = color;
+            colorTotals.red += red;
+            colorTotals.green += green;
+            colorTotals.blue += blue;
+            colorTotals.brightness += (red + green + blue) / 3;
+            const max = Math.max(red, green, blue);
+            const min = Math.min(red, green, blue);
+            colorTotals.saturation += max > 0 ? (max - min) / max : 0;
+        }
+    }
+    const totalPixels = width * height;
+    const averages = {
+        red: colorTotals.red / totalPixels,
+        green: colorTotals.green / totalPixels,
+        blue: colorTotals.blue / totalPixels,
+        brightness: colorTotals.brightness / totalPixels,
+        saturation: colorTotals.saturation / totalPixels,
+        variance: 0
+    };
+    // Second pass: calculate variance
+    for(let x = 0; x < width; x++){
+        for(let y = 0; y < height; y++){
+            const color = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$jimp$2f$dist$2f$esm$2f$index$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__.intToRGBA(image.getPixelColor(x, y));
+            const { r: red, g: green, b: blue } = color;
+            colorTotals.variance += Math.pow(red - averages.red, 2) + Math.pow(green - averages.green, 2) + Math.pow(blue - averages.blue, 2);
+        }
+    }
+    averages.variance = Math.sqrt(colorTotals.variance / (totalPixels * 3));
+    return {
+        ph: calculatePH(averages),
+        turbidity: calculateTurbidity(averages),
+        dissolvedOxygen: calculateDissolvedOxygen(averages),
+        temperature: calculateTemperature(averages),
+        conductivity: calculateConductivity(averages),
+        totalDissolvedSolids: calculateTDS(averages),
+        chlorine: calculateChlorine(averages),
+        hardness: calculateHardness(averages)
+    };
+}
+function calculatePH(averages) {
+    const rgRatio = averages.red / averages.green;
+    const bModifier = averages.blue / 255;
+    const baseValue = 7 + (rgRatio - 1) * 3.5;
+    return Math.max(0, Math.min(14, baseValue + (bModifier - 0.5)));
+}
+function calculateTurbidity(averages) {
+    const brightnessComponent = (255 - averages.brightness) / 6.375;
+    const varianceComponent = averages.variance / 30;
+    return Math.max(0, Math.min(40, brightnessComponent + varianceComponent));
+}
+function calculateDissolvedOxygen(averages) {
+    return Math.max(0, Math.min(15, averages.blue / 255 * 10 + averages.saturation * 5));
+}
+function calculateTemperature(averages) {
+    return Math.max(0, Math.min(40, averages.red / 255 * 40));
+}
+function calculateConductivity(averages) {
+    return Math.max(0, Math.min(2000, averages.variance * 5 + averages.brightness / 255 * 1000));
+}
+function calculateTDS(averages) {
+    return Math.max(0, Math.min(1000, averages.brightness / 255 * 500 + averages.variance * 2));
+}
+function calculateChlorine(averages) {
+    return Math.max(0, Math.min(4, (averages.green - averages.blue) / 255 * 4));
+}
+function calculateHardness(averages) {
+    return Math.max(0, Math.min(300, (averages.red + averages.green) / (2 * 255) * 300));
+}
+function determineWaterQuality(metrics) {
+    const scores = {
+        ph: scoreInRange(metrics.ph, 6.5, 8.5),
+        turbidity: scoreInRange(metrics.turbidity, 0, 5),
+        dissolvedOxygen: scoreInRange(metrics.dissolvedOxygen, 6, 8),
+        tds: scoreInRange(metrics.totalDissolvedSolids, 0, 500),
+        chlorine: scoreInRange(metrics.chlorine, 0.2, 2),
+        hardness: scoreInRange(metrics.hardness, 60, 180)
+    };
+    const averageScore = Object.values(scores).reduce((a, b)=>a + b) / Object.keys(scores).length;
+    if (averageScore >= 0.9) return "Excellent";
+    if (averageScore >= 0.7) return "Good";
+    if (averageScore >= 0.5) return "Fair";
+    return "Poor";
+}
+function scoreInRange(value, min, max) {
+    if (value >= min && value <= max) return 1;
+    const midpoint = (min + max) / 2;
+    const deviation = Math.abs(value - midpoint) / (max - min);
+    return Math.max(0, 1 - deviation);
+}
+function assessWaterSafety(metrics) {
+    const isDrinkable = metrics.ph >= 6.5 && metrics.ph <= 8.5 && metrics.turbidity <= 1 && metrics.dissolvedOxygen >= 6 && metrics.totalDissolvedSolids <= 500 && metrics.chlorine >= 0.2 && metrics.chlorine <= 4;
+    const isSwimmable = metrics.ph >= 6.0 && metrics.ph <= 9.0 && metrics.turbidity <= 5 && metrics.dissolvedOxygen >= 4;
+    const isIrrigationSafe = metrics.ph >= 6.0 && metrics.ph <= 8.5 && metrics.totalDissolvedSolids <= 2000;
+    return {
+        isDrinkable,
+        isSwimmable,
+        isIrrigationSafe
+    };
+}
+function generateRecommendations(metrics, safety) {
+    const recommendations = [];
+    if (!safety.isDrinkable) {
+        if (metrics.ph < 6.5 || metrics.ph > 8.5) {
+            recommendations.push(`pH level (${metrics.ph.toFixed(1)}) is outside safe drinking range. Consider pH adjustment.`);
+        }
+        if (metrics.turbidity > 1) {
+            recommendations.push("Water turbidity is high. Filtration recommended before consumption.");
+        }
+        if (metrics.chlorine < 0.2) {
+            recommendations.push("Chlorine levels are low. Consider additional disinfection.");
+        }
+    }
+    if (metrics.hardness > 180) {
+        recommendations.push("Water is very hard. Consider using a water softener.");
+    }
+    if (metrics.totalDissolvedSolids > 500) {
+        recommendations.push("High TDS levels detected. Consider reverse osmosis treatment.");
+    }
+    if (recommendations.length === 0) {
+        recommendations.push("Water quality is within acceptable ranges. Regular monitoring recommended.");
+    }
+    return recommendations;
 }
 }}),
 "[project]/ (server-utils)": ((__turbopack_context__) => {
