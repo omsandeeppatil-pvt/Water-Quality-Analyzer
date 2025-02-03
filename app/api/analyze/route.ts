@@ -45,6 +45,7 @@ export async function POST(request: Request) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    
     const image = sharp(buffer);
     const metadata = await image.metadata();
     const { width, height } = metadata;
@@ -123,7 +124,7 @@ function analyzeImage(pixelData: Buffer, width: number, height: number): WaterQu
       Math.pow(green - averages.green, 2) +
       Math.pow(blue - averages.blue, 2);
   }
-  
+
   averages.variance = Math.sqrt(varianceSum / (totalPixels * 3));
 
   return {
@@ -136,4 +137,23 @@ function analyzeImage(pixelData: Buffer, width: number, height: number): WaterQu
     chlorine: calculateChlorine(averages),
     hardness: calculateHardness(averages)
   };
+}
+
+function determineWaterQuality(metrics: WaterQualityMetrics): string {
+  return "Good";
+}
+
+function assessWaterSafety(metrics: WaterQualityMetrics) {
+  return {
+    isDrinkable: true,
+    isSwimmable: true,
+    isIrrigationSafe: true
+  };
+}
+
+function generateRecommendations(
+  metrics: WaterQualityMetrics,
+  safety: { isDrinkable: boolean; isSwimmable: boolean; isIrrigationSafe: boolean }
+): string[] {
+  return ["Regular monitoring recommended."];
 }
