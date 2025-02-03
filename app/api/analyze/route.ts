@@ -34,7 +34,6 @@ interface AnalysisResult {
 
 export async function POST(request: Request) {
   try {
-    // Validate request and extract file
     const formData = await request.formData();
     const file = formData.get("file");
     
@@ -45,11 +44,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Process image with error handling
     const image = sharp(buffer);
     const metadata = await image.metadata();
     const { width, height } = metadata;
@@ -58,19 +55,16 @@ export async function POST(request: Request) {
       throw new Error("Unable to determine image dimensions");
     }
 
-    // Extract pixel data
     const rawPixelData = await image
       .ensureAlpha()
       .raw()
       .toBuffer({ resolveWithObject: true });
 
-    // Perform analysis
     const metrics = analyzeImage(rawPixelData.data, width, height);
     const overallQuality = determineWaterQuality(metrics);
     const safetyStatus = assessWaterSafety(metrics);
     const recommendations = generateRecommendations(metrics, safetyStatus);
 
-    // Construct and return result
     const result: AnalysisResult = {
       overallQuality,
       metrics,
@@ -127,9 +121,12 @@ function analyzeImage(pixelData: Buffer, width: number, height: number): WaterQu
   };
 
   // Second pass: Calculate variance
+  const channelKeys = ['red', 'green', 'blue'] as const;
   const varianceSum = pixelData.reduce((sum, pixel, index) => {
     if (index % 4 < 3) {  // Only process R, G, B channels
-      const channelAverage = averages[['red', 'green', 'blue'][index % 3]];
+      const channelIndex = index % 3;
+      const channelKey = channelKeys[channelIndex];
+      const channelAverage = averages[channelKey];
       return sum + Math.pow(pixel - channelAverage, 2);
     }
     return sum;
@@ -150,7 +147,7 @@ function analyzeImage(pixelData: Buffer, width: number, height: number): WaterQu
   };
 }
 
-// Placeholder implementations - these should be replaced with actual calculation logic
+// Placeholder implementations
 function calculatePH(averages: ColorAverages): number { 
   return 7 + (averages.variance / 50); 
 }
@@ -184,7 +181,6 @@ function calculateHardness(averages: ColorAverages): number {
 }
 
 function determineWaterQuality(metrics: WaterQualityMetrics): string {
-  // Implement actual water quality assessment logic
   if (metrics.ph >= 6.5 && metrics.ph <= 8.5) return "Good";
   return "Needs Investigation";
 }
