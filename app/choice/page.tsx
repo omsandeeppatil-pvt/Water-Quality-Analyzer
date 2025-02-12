@@ -20,18 +20,6 @@ const ChoicePage: React.FC = () => {
             Upload & Analyze
           </Link>
         </div>
-
-        {/* Choose from Map Section */}
-        <div className={styles.card}>
-          <FaMapMarkedAlt className={styles.icon} /> {/* Icon for map */}
-          <h2 className={styles.cardTitle}>Choose from Map</h2>
-          <p className={styles.cardDescription}>
-            Select a location on the map to analyze water quality data for that area.
-          </p>
-          <Link href="/map" className={styles.actionButton}>
-            View Map
-          </Link>
-        </div>
       </div>
     </div>
   );
