@@ -1,7 +1,7 @@
 // pages/choice.tsx (Choice Page)
 import React from "react";
 import Link from "next/link";
-import { FaUpload, FaMapMarkedAlt } from "react-icons/fa"; // Import icons
+import { FaUpload  } from "react-icons/fa"; // Import icons
 import styles from "@/app/styles/choice.module.css";
 
 const ChoicePage: React.FC = () => {
